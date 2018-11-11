@@ -1,0 +1,38 @@
+.title {
+  text-align: center;
+}
+
+.login-form {
+  margin-top: 100px;
+}
+
+.login-button{
+  margin-left: 475px;
+}
+
+.btn-playlist {
+  margin-left: 580px;
+}
+
+.btn-primary {
+  background-color: #1db954 !important;
+  border-color: #1db954 !important;
+}
+
+.card-flex {
+  display: flex !important;
+  flex-wrap: wrap;
+  margin-left: 80px;
+  margin-right: 80px;
+  align-items: center;
+}
+
+.card-flex-item {
+  flex-grow: 1;
+  max-width: 333px;
+  height: 40%;
+  margin: 20;
+}
+
+/* .card-body {
+} */

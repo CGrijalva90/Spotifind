@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  .container.login-form
+    script.
+      if (status !== 304)
+        console.log('status is 302')
+    h1.title Log In
+    a.btn.btn-primary.login-button(href="/login") Log in with Spotify

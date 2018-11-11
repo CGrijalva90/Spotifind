@@ -1,0 +1,18 @@
+extends layout
+
+block content
+
+  div.container
+    h1 This is the events page
+    form(action="/results" method="POST")
+      label(for="address") Address:
+      br
+      input(type="text" name="address" placeholder="Address" value="2015 Bedford Ave, New York NY")
+      br
+      br
+      label(for="Playlist") Playlist:
+      br
+      input(type="text" name="playlistName" placeholder="Play List Name" value="e.g. San Francisco 12/03-12/05")
+      br
+      br
+      input(type="submit" value="Search   🚀" class="btn btn-primary")

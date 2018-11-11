@@ -1,0 +1,28 @@
+{
+  "name": "Spotivize2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "cookie-parser": "^1.4.3",
+    "express": "^4.16.4",
+    "geocodio": "^2.0.0",
+    "lodash": "^4.17.11",
+    "morgan": "^1.9.1",
+    "node-fetch": "^2.2.1",
+    "node-geocoder": "^3.22.0",
+    "nodemon": "^1.18.6",
+    "path": "^0.12.7",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2",
+    "spotify-web-api-node": "^4.0.0"
+  }
+}
