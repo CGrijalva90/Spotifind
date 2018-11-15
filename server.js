@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const config = require('./config');
 const Spotify = require('spotify-web-api-node');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
@@ -12,6 +13,7 @@ const Clients = require('./dataClients');
 let SPOTIFY_ID = '';
 let SPOTIFY_TOKEN = '';
 
+
 const NodeGeocoder = require('node-geocoder');
 
 const options = {
@@ -19,21 +21,24 @@ const options = {
 
   // Optional depending on the providers
   httpAdapter: 'https', // Default
-  apiKey: 'AIzaSyA4SEKGigIW3WvOq-MkTeoqjy7cVV3UySs', // for Mapquest, OpenCage, Google Premier
+  apiKey: config.GEOCODER_API, // for Mapquest, OpenCage, Google Premier
   formatter: null // 'gpx', 'string', ...
 };
 
 const geocoder = NodeGeocoder(options);
 
-const clientId = '12c1b2ead72e464bad8430c7abe54c31';
-const clientSecret = '2eadc6a80c4842b3acacdb1860918981';
+const clientId = config.SPOTIFY_CLIENT_ID;
+const clientSecret = config.SPOTIFY_SECRET_ID;
 const redirectUri = 'http://localhost:4000/callback';
-const songkickApi = '8AxaC9ePaMwJqgW3';
+const songkickApi = config.SONGKICK_API;
 const PORT = process.env.PORT || 4000;
+
+console.log(config)
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 app.use(cookieParser());
+app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, '/public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -65,7 +70,6 @@ app.get('/', (req, res) => {
 app.get('/login', (req, res) => {
   const state = generateRandomString(16);
   res.cookie(STATE_KEY, state);
-  console.log(spotifyApi.createAuthorizeURL(scopes, state));
   res.redirect(spotifyApi.createAuthorizeURL(scopes, state));
 });
 
@@ -109,14 +113,14 @@ app.get('/search', (req, res) => {
 
 app.post('/results', async (req, res) => {
   const { address } = req.body;
-  // console.log(req.body.address);
-  // console.log(req.body.playlistName);
+  const { playlistName } = req.body;
 
   // Parse address to lat and lng in order to search location with Sonkick
   const geoLocation = await geocoder.geocode(
     address,
     (err, results) => results
   );
+
   const lat = geoLocation[0].latitude;
   const lng = geoLocation[0].longitude;
 
@@ -124,13 +128,76 @@ app.post('/results', async (req, res) => {
   const metroId = location.resultsPage.results.location[0].metroArea.id;
 
   // Search upcoming events
-  const upcomingEvents = await Clients.searchUpcomingEvents(metroId, songkickApi);
+  const upcomingEvents = await Clients.searchUpcomingEvents(
+    metroId,
+    songkickApi
+  );
 
   // Filter out 'festivals' from event list
-  const filteredEvents = upcomingEvents.resultsPage.results.event.filter(event => event.type !== 'Festival');
-  const artistNames = filteredEvents.map(event => event.performance[0].displayName);
-  console.log(artistNames);
-  res.send(filteredEvents);
+  const filteredEvents = upcomingEvents.resultsPage.results.event.filter(
+    event => event.type !== 'Festival'
+  );
+
+  // Retrieve array of artist names to search for in Spotify
+  const artistNames = filteredEvents.map(
+    event => event.performance[0].displayName
+  );
+
+  // Retrieve artists information
+  const artistsPromises = artistNames.map(async artist => {
+    const artists = await spotifyApi.searchArtists(artist);
+    return artists;
+  });
+
+  const artistData = await Promise.all(artistsPromises);
+
+  // Retrieve artist IDs to reach Spotify API's and grab track information
+  const artistIds = [];
+  artistData.forEach(artist => {
+    if (artist.body.artists.items[0]) {
+      artistIds.push(artist.body.artists.items[0].id);
+    } else {
+      return 'No ID found!';
+    }
+  });
+
+  const filteredArtists = artistIds.filter(artist => artist !== 'No ID found');
+
+  const trackPromises = filteredArtists.map(async artistId => {
+    const tracks = await spotifyApi.getArtistTopTracks(artistId, 'US');
+    return tracks;
+  });
+
+  const tracksData = await Promise.all(trackPromises);
+
+  const trackUris = { uris: [] };
+  tracksData.forEach(data => {
+    if (data.body.tracks[0] && data.body.tracks[1] === undefined) {
+      trackUris.uris.push(data.body.tracks[0].uri);
+    } else if (data.body.tracks[0] && data.body.tracks[1]) {
+      trackUris.uris.push(data.body.tracks[1].uri);
+    } else {
+      return 'No track uri found!';
+    }
+  });
+
+  // Create empty Spotify playlist
+  const playlist = await Clients.createSpotifyPlaylist(
+    playlistName,
+    SPOTIFY_ID,
+    SPOTIFY_TOKEN
+  );
+
+  // Add tracks to created playlist
+  const playlistCreated = await spotifyApi.addTracksToPlaylist(
+    playlist.id,
+    trackUris.uris
+  );
+
+  console.log('\x1b[33m%s\x1b[0m', 'playlist successfully created!');
+
+  res.send({ data: playlist });
+  return playlistCreated;
 });
 
 app.listen(PORT, () => {
