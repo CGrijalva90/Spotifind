@@ -12,8 +12,7 @@ const morgan = require('morgan');
 const Clients = require('./dataClients');
 let SPOTIFY_ID = '';
 let SPOTIFY_TOKEN = '';
-
-
+const SpotifyClient = require('./spotifyApi');
 const NodeGeocoder = require('node-geocoder');
 
 const options = {
@@ -33,7 +32,6 @@ const redirectUri = 'http://localhost:4000/callback';
 const songkickApi = config.SONGKICK_API;
 const PORT = process.env.PORT || 4000;
 
-console.log(config)
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
@@ -143,6 +141,8 @@ app.post('/results', async (req, res) => {
     event => event.performance[0].displayName
   );
 
+  console.log(artistNames);
+
   // Retrieve artists information
   const artistsPromises = artistNames.map(async artist => {
     const artists = await spotifyApi.searchArtists(artist);
@@ -159,6 +159,7 @@ app.post('/results', async (req, res) => {
     } else {
       return 'No ID found!';
     }
+    return artistIds;
   });
 
   const filteredArtists = artistIds.filter(artist => artist !== 'No ID found');
@@ -179,6 +180,7 @@ app.post('/results', async (req, res) => {
     } else {
       return 'No track uri found!';
     }
+    return trackUris;
   });
 
   // Create empty Spotify playlist
